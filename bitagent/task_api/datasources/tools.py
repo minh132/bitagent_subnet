@@ -83,6 +83,7 @@ class ToolCallData(BaseModel):
     messages: List[ChatMessage]
     tools: list[Tool]
 
+TYPES = ["str", "int", "dict", "list", "float", "bool", "string", "integer", "number", "boolean", "dictionary", "object"]
 
 def detect_type(value: Any) -> str:
     type_mapping = {
@@ -180,6 +181,10 @@ class ToolDataset(Iterator):
                         tools = [Tool(**tool) for tool in data["tools"]]
                     else:
                         raise ValueError(f"Invalid format for tools: {data['tools']}")
+                    for tool in tools:
+                        for arg_name, arg_value in tool.arguments.items():
+                            if arg_value["type"] not in TYPES:
+                                raise ValueError(f"Inavlid type used type: {arg_value['type']}")
                     return ToolCallData(messages=messages, tools=tools)
                     
             except Exception as e:
