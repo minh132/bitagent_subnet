@@ -24,7 +24,9 @@ import bittensor as bt
 from rich.console import Console
 
 # Bittensor Miner Template:
-import bitagent
+import sys
+sys.path.append("/home/user/bitten/sn20_miner/bitagent_subnet/")
+import bitagent_2
 # Sync calls set weights and also resyncs the metagraph.
 from common.utils.config import add_args as util_add_args
 from common.utils.config import config as util_config
@@ -80,8 +82,8 @@ class Miner(BaseMinerNeuron):
         self.miner_init(self)
 
     async def forward_for_task(
-        self, synapse: bitagent.protocol.QnATask
-    ) -> bitagent.protocol.QnATask:
+        self, synapse: bitagent_2.protocol.QnATask
+    ) -> bitagent_2.protocol.QnATask:
         """
         Processes the incoming BitAgent synapse and returns response.
 
@@ -98,15 +100,15 @@ class Miner(BaseMinerNeuron):
         return synapse
 
     async def forward_for_result(
-        self, synapse: bitagent.protocol.QnAResult
-    ) -> bitagent.protocol.QnAResult:
+        self, synapse: bitagent_2.protocol.QnAResult
+    ) -> bitagent_2.protocol.QnAResult:
         if self.config.logging.debug:
             rich_console.print(synapse.results)
         return synapse
 
     async def forward_for_alive(
-        self, synapse: bitagent.protocol.IsAlive
-    ) -> bitagent.protocol.IsAlive:
+        self, synapse: bitagent_2.protocol.IsAlive
+    ) -> bitagent_2.protocol.IsAlive:
         synapse.response = True
         return synapse
 
@@ -164,13 +166,13 @@ class Miner(BaseMinerNeuron):
         )
         return False, "Hotkey recognized!"
 
-    async def blacklist_for_task(self, synapse: bitagent.protocol.QnATask) -> Tuple[bool, str]:
+    async def blacklist_for_task(self, synapse: bitagent_2.protocol.QnATask) -> Tuple[bool, str]:
         return await self.__blacklist(synapse)
 
-    async def blacklist_for_result(self, synapse: bitagent.protocol.QnAResult) -> Tuple[bool, str]:
+    async def blacklist_for_result(self, synapse: bitagent_2.protocol.QnAResult) -> Tuple[bool, str]:
         return await self.__blacklist(synapse)
 
-    async def blacklist_for_alive(self, synapse: bitagent.protocol.IsAlive) -> Tuple[bool, str]:
+    async def blacklist_for_alive(self, synapse: bitagent_2.protocol.IsAlive) -> Tuple[bool, str]:
         return await self.__blacklist(synapse)
 
     async def __priority(self, synapse: bt.Synapse) -> float:
@@ -205,13 +207,13 @@ class Miner(BaseMinerNeuron):
         )
         return prirority
 
-    async def priority_for_task(self, synapse: bitagent.protocol.QnATask) -> float:
+    async def priority_for_task(self, synapse: bitagent_2.protocol.QnATask) -> float:
         return await self.__priority(synapse)
 
-    async def priority_for_result(self, synapse: bitagent.protocol.QnAResult) -> float:
+    async def priority_for_result(self, synapse: bitagent_2.protocol.QnAResult) -> float:
         return await self.__priority(synapse)
 
-    async def priority_for_alive(self, synapse: bitagent.protocol.IsAlive) -> float:
+    async def priority_for_alive(self, synapse: bitagent_2.protocol.IsAlive) -> float:
         return await self.__priority(synapse)
 
     async def forward(self, synapse: bt.Synapse) -> bt.Synapse:
