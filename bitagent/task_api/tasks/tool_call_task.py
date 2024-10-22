@@ -26,7 +26,7 @@ from bitagent.task_api.datasources.tools import ToolCallData
 from bitagent.task_api.postprocess import tool_call_postprocess
 from bitagent.task_api.helpers.tool_parsing import validate_tool_call
 from bitagent.task_api.helpers.convo_parsing import find_msgs_before_tool_call, find_first_tool_call
-from bitagent.task_api.criteria import default_criteria, tool_call_criteria, dataset_tool_call_criteria
+from bitagent.task_api.criteria import default_criteria, tool_call_criteria, dataset_tool_call_criteria, irrelevant_tool_call_criteria
 REWRITE_PROPMT = """Please rewrite the following text, ensuring to maintain the original meaning and nuances but altering the sentence structures, vocabulary, and overall presentation. 
 The goal is to produce a version of the text that conveys the same information and sentiments as the original, but in a fresh and distinct manner. 
 Avoid summarizing or omitting any details; instead, focus on presenting the same concepts and messages in a new light.
@@ -60,33 +60,31 @@ class ToolCallTask(Task):
         self.validator = validator
         self.timeout = 12.0
         self.name += " - Tool Call"
-        self.real_task = True
         self.weight = TASK_WEIGHTS["tool_call"]
-        if self.real_task:
-            try:
-                messages, tools, data = self.generate_task_data()
-                self.criteria = default_criteria + tool_call_criteria(
-                    expected_convo=messages_to_list(data.messages)
-                )
-            except Exception as e:
-                bt.logging.error(f'Exception getting real task {e}')
-                raise e
-        else:
-            try:
-                messages, tools, data = self.generate_dataset_task_data()
-                self.criteria = default_criteria + dataset_tool_call_criteria() 
-                self.postprocess = tool_call_postprocess()
-                self.name += " Dataset"
-                self.weight = TASK_WEIGHTS["tool_call_dataset"]
-            except Exception as e:
-                bt.logging.error(f'Exception getting dataset task {e}')
-                raise e
+        try:
+            messages, tools, data = self.generate_task_data()
+            # use data.messages by default
+            expected_messages = messages_to_list(data.messages)
+            self.criteria = default_criteria + tool_call_criteria(
+                expected_convo=expected_messages
+            ) 
+            # 75% of the time do a tool call task with a relevant tool, other times do a tool call with no valid tool option
+            if bool(random.random() < 0.25):
+                # irrelevant tool call
+                # remove the real tool
+                tools = [t for t in tools if t.name != json.loads(data.messages[1].content)['name']]
+                # create an irrelevance response that does not hae a tool
+                expected_messages = [data.messages[0].to_dict(),{"role":"tool call", "content": {}},{"role":"assistant", "content": "There is no valid tool for this user request."}]
+                self.criteria = default_criteria + irrelevant_tool_call_criteria(expected_convo=expected_messages)
+            
+        except Exception as e:
+            bt.logging.error(f'Exception getting real task {e}')
+            raise e
             
         self.messages = messages
         self.synapse = QnATask(
             urls=[], datas=[], tools=tools, messages=messages
         )
-
     
     def generate_dataset_task_data(self):
         try:
